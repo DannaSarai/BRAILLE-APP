@@ -110,3 +110,28 @@ footer {
     color: #6b7280;
     font-family: "Open Sans" ;
 }
+
+#textoBraille {
+    font-family: "Segoe UI Symbol", "DejaVu Sans Mono", "Arial Unicode MS", monospace;
+}
+
+#btnDescargar{
+    background-color: #6b7280;
+    color: #f9fafb;
+    border-radius: 1rem;
+    width: 180px;
+    height: 30px;
+    font-family: "Stack Sans Headline";
+    border: none;
+    margin-top: 10px;
+}
+
+#btnDescargar:hover:enabled{
+    background-color: #4b5563;
+    cursor: pointer;
+}
+
+#btnDescargar:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+}
