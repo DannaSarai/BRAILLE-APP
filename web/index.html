@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Transcriptor a Braille</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Transcriptor a Braille</h1>
+        <p class="subtitle">Convierte texto en español a braille usando Java + API REST</p>
+    </header>
+
+    <main>
+        <section class="panel">
+            <h2>Texto en español</h2>
+            <textarea id="textoEntrada" placeholder="Escribe aquí el texto a convertir"></textarea>
+
+            <button id="btnConvertir">Convertir a Braille</button>
+          <div class="nota">
+            <p>
+                Transcribir textos de español a braille incluyendo números, abecedario, vocales acentuadas, y signos básicos
+            </p>
+          </div>
+        </section>
+
+        <section class="panel">
+            <h2>Resultado en braille</h2>
+            <textarea id="textoBraille" placeholder="Aquí se mostrará el resultado" readonly></textarea>
+            <div class="nota1">
+            <p>
+                Generar señalética braille a partir de textos en español.
+            </p>
+          </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Proyecto de construcción y evolución de software - Transcriptor Braille</p>
+    </footer>
+
+    <script>
+        document.getElementById("btnConvertir").addEventListener("click", async () => {
+            const texto = document.getElementById("textoEntrada").value;
+
+            const respuesta = await fetch("http://localhost:8081/traducir", {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: texto
+            });
+
+            const braille = await respuesta.json();
+            document.getElementById("textoBraille").value = braille;
+        });
+    </script>
+</body>
+</html>
