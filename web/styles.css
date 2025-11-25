@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Stack+Sans+Headline:wght@200..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+body {
+    font-family: 'Opes Sans';
+    margin: 0;
+    padding: 0;
+    background-image: url('https://www.shutterstock.com/image-photo/top-view-text-international-braille-600nw-1357942304.jpg');
+    color: #111827;
+}
+
+header {
+    background-color: #111827;
+    color: #f9fafb;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    font-family: "Josefin Sans";
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.subtitle {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+main {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.panel {
+    background-color: #dae0ec;
+    border-radius: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    width: min(500px, 100%);
+}
+
+.panel h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.2rem;
+    font-family: "Stack Sans Headline";
+}
+
+textarea {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    padding: 0.75rem;
+    border-radius: 1rem;
+    border: none;
+    font-size: 1rem;
+    box-sizing: border-box;
+    background-color: #f3f4f6;
+}
+#btnConvertir{
+    background-color: #6b7280;
+    color: #f9fafb;
+    border-radius: 1rem;
+    width: 140px;
+    height: 30px;
+    font-family: "Stack Sans Headline";
+    border: none;
+    margin: 5px;
+}
+#btnConvertir:hover{
+    background-color: #4b5563;
+    cursor: pointer;
+}
+.nota {
+    border: 1px solid #4b5563;
+    border-radius: 1rem;
+    margin-top: 0.75rem;
+    display: flex;
+    padding-left: 1rem;
+    color: #4b5563;
+}
+.nota p{
+    font-size: 0.85rem;
+    font-family: "Open Sans";
+    color: #4b5563;
+}
+
+.nota1 {
+    border: 1px solid #4b5563;
+    border-radius: 1rem;
+    margin-top: 3.3rem;
+    display: flex;
+    padding-left: 1rem;
+    color: #4b5563;
+}
+.nota1 p{
+    font-size: 0.85rem;
+    font-family: "Open Sans";
+    color: #4b5563;
+}
+footer {
+    text-align: center;
+    padding: 1rem 0;
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-family: "Open Sans" ;
+}
