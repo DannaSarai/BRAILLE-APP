@@ -113,12 +113,13 @@ public class BrailleTranslator {
      * El método maneja la conversión a minúsculas, el espaciado, y la inserción
      * del signo numérico '⠼' para secuencias de dígitos.
      *
-     * @param text El texto en español a traducir.
+     * @param text El texto en español a traducir. (Cadena de texto limpia, es decir,eliminar saltos de linea.)
      * @return La cadena de texto traducida a código Braille. Retorna una cadena vacía si la entrada es nula o vacía.
      */
     public String textToBraille(String text) {
         if (text == null || text.isBlank()) return "";
 
+        text = text.replaceAll("[\\n\\r]", " "); 
         StringBuilder result = new StringBuilder();
         boolean insideNumber = false;
 
