@@ -114,8 +114,11 @@ public class BrailleTranslator {
 
     /**
      * Convierte una cadena de texto en español a su representación en código Braille.
-     * El método maneja la conversión a minúsculas, el espaciado, y la inserción
+     * El método realiza las siguientes operaciones:
+     * Maneja letras mayúsculas anteponiendo el signo de mayúscula '⠨'.
+     * Maneja la conversión a minúsculas, el espaciado, y la inserción
      * del signo numérico '⠼' para secuencias de dígitos.
+     * Soporta números con guiones.
      *
      * @param text El texto en español a traducir. (Cadena de texto limpia, es decir,eliminar saltos de linea.)
      * @return La cadena de texto traducida a código Braille. Retorna una cadena vacía si la entrada es nula o vacía.
@@ -147,7 +150,7 @@ public class BrailleTranslator {
                 continue;
             }
             
-            if (token.matches(".*\\d.*") && token.contains("-")) {
+            if (token.matches("\\d+(?:-\\d+)+")) {
                 String[] parts = token.split("-");
                 for (int i = 0; i < parts.length; i++) {
                     String p = parts[i];
