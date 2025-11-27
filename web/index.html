@@ -27,6 +27,11 @@
         <section class="panel">
             <h2>Resultado en braille</h2>
             <textarea id="textoBraille" placeholder="Aquí se mostrará el resultado" readonly></textarea>
+            
+            
+            <button id="btnDescargar" disabled>Descargar señalética</button>
+            <canvas id="brailleCanvas" width="800" height="200" style="display:none;"></canvas>
+
             <div class="nota1">
             <p>
                 Generar señalética braille a partir de textos en español.
@@ -40,8 +45,15 @@
     </footer>
 
     <script>
-        document.getElementById("btnConvertir").addEventListener("click", async () => {
-            const texto = document.getElementById("textoEntrada").value;
+        const btnConvertir = document.getElementById("btnConvertir");
+        const btnDescargar = document.getElementById("btnDescargar");
+        const txtEntrada   = document.getElementById("textoEntrada");
+        const txtBraille   = document.getElementById("textoBraille");
+        const canvas       = document.getElementById("brailleCanvas");
+        const ctx          = canvas.getContext("2d");
+
+        btnConvertir.addEventListener("click", async () => {
+            const texto = txtEntrada.value;
 
             const respuesta = await fetch("http://localhost:8081/traducir", {
                 method: "POST",
@@ -50,7 +62,37 @@
             });
 
             const braille = await respuesta.json();
-            document.getElementById("textoBraille").value = braille;
+            txtBraille.value = braille;
+
+            btnDescargar.disabled = !braille.trim();
+        });
+
+        btnDescargar.addEventListener("click", () => {
+            const braille = txtBraille.value.trim();
+            if (!braille) return;
+
+            const padding = 40;
+            const fontSize = 80;
+            const fontFamily = "'Segoe UI Symbol','DejaVu Sans Mono','Arial Unicode MS',monospace";
+
+            const width = Math.max(400, braille.length * fontSize * 0.8 + padding * 2);
+            const height = fontSize + padding * 2;
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = "#000";
+            ctx.font = fontSize + "px " + fontFamily;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(braille, width / 2, height / 2);
+
+            const link = document.createElement("a");
+            link.download = "senaletica-braille.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
         });
     </script>
 </body>

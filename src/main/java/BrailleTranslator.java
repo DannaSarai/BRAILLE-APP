@@ -90,9 +90,9 @@ public class BrailleTranslator {
         brailleMap.put('"', "⠦");
         brailleMap.put('-', "⠤");
         brailleMap.put('+', "⠖");
-        brailleMap.put('x', "⠦");   // multiplicación
+        brailleMap.put('x', "⠦");
         brailleMap.put('÷', "⠲");
-        brailleMap.put('=', "⠶");// división
+        brailleMap.put('=', "⠶");
     }
 
     /**
@@ -114,8 +114,11 @@ public class BrailleTranslator {
 
     /**
      * Convierte una cadena de texto en español a su representación en código Braille.
-     * El método maneja la conversión a minúsculas, el espaciado, y la inserción
+     * El método realiza las siguientes operaciones:
+     * Maneja letras mayúsculas anteponiendo el signo de mayúscula '⠨'.
+     * Maneja la conversión a minúsculas, el espaciado, y la inserción
      * del signo numérico '⠼' para secuencias de dígitos.
+     * Soporta números con guiones.
      *
      * @param text El texto en español a traducir. (Cadena de texto limpia, es decir,eliminar saltos de linea.)
      * @return La cadena de texto traducida a código Braille. Retorna una cadena vacía si la entrada es nula o vacía.
@@ -123,28 +126,74 @@ public class BrailleTranslator {
     public String textToBraille(String text) {
         if (text == null || text.isBlank()) return "";
 
-        text = text.replaceAll("[\\n\\r]", " "); 
+        text = text.replaceAll("[\\n\\r]", " ");
         StringBuilder result = new StringBuilder();
         boolean insideNumber = false;
 
-        for (char c : text.toLowerCase().toCharArray()) {
-            if (Character.isDigit(c)) {
-                if (!insideNumber) {
-                    result.append(NUMBER_SIGN);
-                    insideNumber = true;
-                }
-                result.append(getBrailleChar(c));
-            } else {
+        String[] tokens = text.split("((?<= )|(?= ))");
+
+        for (String token : tokens) {
+
+            if (token.equals(" ")) {
+                result.append(" ");
                 insideNumber = false;
-                if (c == ' ') {
-                    result.append(" ");
-                } else {
-                    result.append(getBrailleChar(c));
+                continue;
+            }
+
+            if (token.matches("[A-ZÁÉÍÓÚÜÑ]+")) {
+                result.append("⠨");
+                for (char c : token.toCharArray()) {
+                    char lower = Character.toLowerCase(c);
+                    result.append(getBrailleChar(lower));
                 }
+                insideNumber = false;
+                continue;
+            }
+            
+            if (token.matches("\\d+(?:-\\d+)+")) {
+                String[] parts = token.split("-");
+                for (int i = 0; i < parts.length; i++) {
+                    String p = parts[i];
+                    if (p.matches("\\d+")) {
+                        result.append(NUMBER_SIGN);
+                        for (char d : p.toCharArray()) {
+                            result.append(getBrailleChar(d));
+                        }
+                    }
+                    if (i < parts.length - 1) {
+                        result.append("⠤");
+                    }
+                }
+                insideNumber = false;
+                continue;
+            }
+            
+            for (char c : token.toCharArray()) {
+
+                if (Character.isDigit(c)) {
+                    if (!insideNumber) {
+                        result.append(NUMBER_SIGN);
+                        insideNumber = true;
+                    }
+                    result.append(getBrailleChar(c));
+                    continue;
+                }
+                
+                if (Character.isLetter(c) && Character.isUpperCase(c)) {
+                    result.append("⠨"); 
+                    result.append(getBrailleChar(Character.toLowerCase(c)));
+                    insideNumber = false;
+                    continue;
+                }
+
+                result.append(getBrailleChar(c));
+                insideNumber = false;
             }
         }
+
         return result.toString();
     }
+
     /**
      * Busca el símbolo Braille correspondiente a un carácter dado en el mapa.
      *
@@ -152,6 +201,6 @@ public class BrailleTranslator {
      * @return La representación en Braille (String) o '⍰' si el carácter no se encuentra en el mapa.
      */
     private String getBrailleChar(char c) {
-        return brailleMap.getOrDefault(c, "⍰ signo no existente en el diccionario"); // placeholder si no existe
+        return brailleMap.getOrDefault(c, "⍰ signo no existente en el diccionario");
     }
 }
