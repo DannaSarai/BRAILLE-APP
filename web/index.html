@@ -1,99 +1,240 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Transcriptor a Braille</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>Transcriptor a Braille</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Transcriptor a Braille</h1>
-        <p class="subtitle">Convierte texto en español a braille usando Java + API REST</p>
-    </header>
 
-    <main>
-        <section class="panel">
-            <h2>Texto en español</h2>
-            <textarea id="textoEntrada" placeholder="Escribe aquí el texto a convertir"></textarea>
+<header>
+  <h1>Transcriptor a Braille</h1>
+  <p class="subtitle">Convierte texto entre español y braille usando Java + API REST</p>
+</header>
 
-            <button id="btnConvertir">Convertir a Braille</button>
-          <div class="nota">
-            <p>
-                Transcribir textos de español a braille incluyendo números, abecedario, vocales acentuadas, y signos básicos
-            </p>
-          </div>
-        </section>
+<main class="translator">
 
-        <section class="panel">
-            <h2>Resultado en braille</h2>
-            <textarea id="textoBraille" placeholder="Aquí se mostrará el resultado" readonly></textarea>
-            
-            
-            <button id="btnDescargar" disabled>Descargar señalética</button>
-            <canvas id="brailleCanvas" width="800" height="200" style="display:none;"></canvas>
+  <section class="tcard" id="cardLeft">
+    <div class="tbar">
+      <span class="tlang active" id="lblLeft">español</span>
+    </div>
 
-            <div class="nota1">
-            <p>
-                Generar señalética braille a partir de textos en español.
-            </p>
-          </div>
-        </section>
-    </main>
+    <textarea id="txtLeft" placeholder="Escribe aquí en español..."></textarea>
 
-    <footer>
-        <p>Proyecto de construcción y evolución de software - Transcriptor Braille</p>
-    </footer>
+    <div class="tcontrols">
+      <button id="btnRun" class="primary">Traducir</button>
+      <button id="btnClearLeft" class="ghost" title="Limpiar">✕</button>
+    </div>
 
-    <script>
-        const btnConvertir = document.getElementById("btnConvertir");
-        const btnDescargar = document.getElementById("btnDescargar");
-        const txtEntrada   = document.getElementById("textoEntrada");
-        const txtBraille   = document.getElementById("textoBraille");
-        const canvas       = document.getElementById("brailleCanvas");
-        const ctx          = canvas.getContext("2d");
+    <div class="tinfo">
+      <small>Español → Braille</small>
+    </div>
+  </section>
 
-        btnConvertir.addEventListener("click", async () => {
-            const texto = txtEntrada.value;
+  <div class="swapWrap">
+    <button id="btnSwap" class="swapBtn" title="Invertir dirección">↔</button>
+  </div>
 
-            const respuesta = await fetch("http://localhost:8081/traducir", {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: texto
-            });
+  <section class="tcard" id="cardRight">
+    <div class="tbar">
+      <span class="tlang" id="lblRight">braille</span>
+    </div>
 
-            const braille = await respuesta.json();
-            txtBraille.value = braille;
+    <textarea id="txtRight" placeholder="Aquí se mostrará el resultado..." readonly></textarea>
 
-            btnDescargar.disabled = !braille.trim();
-        });
+    <div class="tcontrols right">
+      <label class="checkline">
+        <input type="checkbox" id="chkEspejo">
+        Modo espejo (escritura manual)
+      </label>
 
-        btnDescargar.addEventListener("click", () => {
-            const braille = txtBraille.value.trim();
-            if (!braille) return;
+      <button id="btnDescargar" disabled>Descargar señalética</button>
+    </div>
 
-            const padding = 40;
-            const fontSize = 80;
-            const fontFamily = "'Segoe UI Symbol','DejaVu Sans Mono','Arial Unicode MS',monospace";
+    <canvas id="brailleCanvas" width="800" height="200" style="display:none;"></canvas>
 
-            const width = Math.max(400, braille.length * fontSize * 0.8 + padding * 2);
-            const height = fontSize + padding * 2;
-            canvas.width = width;
-            canvas.height = height;
-            
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(0, 0, width, height);
+    <div class="tinfo">
+      <small>La señalética se descarga desde la salida en braille.</small>
+    </div>
+  </section>
 
-            ctx.fillStyle = "#000";
-            ctx.font = fontSize + "px " + fontFamily;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(braille, width / 2, height / 2);
+</main>
 
-            const link = document.createElement("a");
-            link.download = "senaletica-braille.png";
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-        });
-    </script>
+<footer>
+  <p>Proyecto de construcción y evolución de software - Transcriptor Braille</p>
+</footer>
+
+<script>
+  let direction = "ES_TO_BR";
+
+  const txtLeft = document.getElementById("txtLeft");
+  const txtRight = document.getElementById("txtRight");
+
+  const lblLeft = document.getElementById("lblLeft");
+  const lblRight = document.getElementById("lblRight");
+
+  const btnRun = document.getElementById("btnRun");
+  const btnSwap = document.getElementById("btnSwap");
+  const btnClearLeft = document.getElementById("btnClearLeft");
+
+  const chkEspejo = document.getElementById("chkEspejo");
+  const btnDescargar = document.getElementById("btnDescargar");
+
+  const canvas = document.getElementById("brailleCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function espejoCeldaBraille(ch) {
+    const code = ch.codePointAt(0);
+    if (code < 0x2800 || code > 0x28FF) return ch;
+
+    const p = code - 0x2800;
+
+    const d1 = p & 0x01, d2 = p & 0x02, d3 = p & 0x04;
+    const d4 = p & 0x08, d5 = p & 0x10, d6 = p & 0x20;
+    const d7 = p & 0x40, d8 = p & 0x80;
+
+    let mirrored = 0;
+    if (d4) mirrored |= 0x01;
+    if (d5) mirrored |= 0x02;
+    if (d6) mirrored |= 0x04;
+    if (d1) mirrored |= 0x08;
+    if (d2) mirrored |= 0x10;
+    if (d3) mirrored |= 0x20;
+    if (d7) mirrored |= 0x40;
+    if (d8) mirrored |= 0x80;
+
+    return String.fromCodePoint(0x2800 + mirrored);
+  }
+
+  function espejoTextoBraille(texto) {
+    return texto
+      .split("\n")
+      .map(linea => [...linea].reverse().map(espejoCeldaBraille).join(""))
+      .join("\n");
+  }
+
+  function updateUI() {
+    if (direction === "ES_TO_BR") {
+      lblLeft.textContent = "español";
+      lblRight.textContent = "braille";
+      btnRun.textContent = "Traducir";
+      txtLeft.placeholder = "Escribe aquí en español...";
+      txtRight.placeholder = "Aquí se mostrará el resultado en braille...";
+      txtLeft.readOnly = false;
+      txtRight.readOnly = true;
+
+      btnDescargar.disabled = !txtRight.value.trim();
+    } else {
+      lblLeft.textContent = "braille";
+      lblRight.textContent = "español";
+      btnRun.textContent = "Traducir";
+      txtLeft.placeholder = "Escribe o pega aquí en braille...";
+      txtRight.placeholder = "Aquí se mostrará el resultado en español...";
+      txtLeft.readOnly = false;
+      txtRight.readOnly = true;
+      btnDescargar.disabled = true;
+    }
+  }
+
+  async function translate() {
+    const input = txtLeft.value || "";
+
+    if (!input.trim()) {
+      txtRight.value = "";
+      updateUI();
+      return;
+    }
+
+    if (direction === "ES_TO_BR") {
+      const res = await fetch("http://localhost:8081/traducir", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: input
+      });
+      const braille = await res.json();
+      txtRight.value = braille;
+      btnDescargar.disabled = !braille.trim();
+    } else {
+      const res = await fetch("http://localhost:8081/traducir-braille", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: input
+      });
+      const texto = await res.json();
+      txtRight.value = texto;
+
+      btnDescargar.disabled = true;
+    }
+  }
+
+  function swapDirection() {
+    direction = (direction === "ES_TO_BR") ? "BR_TO_ES" : "ES_TO_BR";
+
+    const leftVal = txtLeft.value;
+    const rightVal = txtRight.value;
+
+    txtLeft.value = rightVal;
+    txtRight.value = leftVal;
+
+    updateUI();
+  }
+
+  btnRun.addEventListener("click", translate);
+
+  btnSwap.addEventListener("click", () => {
+    swapDirection();
+  });
+
+  btnClearLeft.addEventListener("click", () => {
+    txtLeft.value = "";
+    txtRight.value = "";
+    updateUI();
+    txtLeft.focus();
+  });
+
+  txtLeft.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      translate();
+    }
+  });
+
+  btnDescargar.addEventListener("click", () => {
+    if (direction !== "ES_TO_BR") return;
+
+    const brailleOriginal = txtRight.value.trim();
+    if (!brailleOriginal) return;
+
+    const usarEspejo = chkEspejo.checked;
+    const braille = usarEspejo ? espejoTextoBraille(brailleOriginal) : brailleOriginal;
+
+    const padding = 40;
+    const fontSize = 80;
+    const fontFamily = "'Segoe UI Symbol','DejaVu Sans Mono','Arial Unicode MS',monospace";
+
+    const width = Math.max(400, braille.length * fontSize * 0.8 + padding * 2);
+    const height = fontSize + padding * 2;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#000";
+    ctx.font = fontSize + "px " + fontFamily;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(braille, width / 2, height / 2);
+
+    const link = document.createElement("a");
+    link.download = usarEspejo ? "senaletica-braille-espejo.png" : "senaletica-braille.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+
+  updateUI();
+</script>
+
 </body>
 </html>

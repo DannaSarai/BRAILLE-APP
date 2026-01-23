@@ -1,6 +1,10 @@
 
-import static spark.Spark.*;
 import com.google.gson.Gson;
+
+import static spark.Spark.before;
+import static spark.Spark.options;
+import static spark.Spark.port;
+import static spark.Spark.post;
 /**
  * Clase principal que inicializa el servidor web y expone el servicio de traducción
  * a través de una API REST utilizando el framework Spark.
@@ -55,6 +59,21 @@ public class Server {
 
             return gson.toJson(braille);
         });
+
+        /**
+         * Define el Endpoint REST para la traducción inversa.
+         * Recibe el braille en el cuerpo de la solicitud HTTP POST y devuelve el texto como JSON.
+         * URL: POST /traducir-braille
+         */
+        post("/traducir-braille", (req, res) -> {
+            res.type("application/json");
+
+            String braille = req.body();
+            String texto = translator.brailleToText(braille);
+
+            return gson.toJson(texto);
+        });
+
 
         System.out.println("✅ Servidor iniciado en http://localhost:8081");
     }

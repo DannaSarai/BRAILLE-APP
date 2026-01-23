@@ -2,19 +2,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Servicio encargado de convertir texto en español a braille.
+ * Servicio encargado de convertir texto en español a braille y viceversa.
  * Esta clase contiene la lógica de negocio central y el mapeo de caracteres.
- * {@code Versión para consola — Iteración 1 del proyecto.}
+ * {@code Versión para consola — Iteración 1 y 2 del proyecto.}
  */
 public class BrailleTranslator {
     /** Mapeo de caracteres del español (minúsculas, acentos, dígitos, puntuación) a su símbolo Braille. */
     private final Map<Character, String> brailleMap;
+    
+    /** Mapeo de símbolos Braille a caracteres del español (minúsculas, acentos, dígitos, puntuación). */
+    private final Map<String, Character> reverseBrailleMap;
+    
     /** Símbolo de prefijo utilizado para indicar que los siguientes caracteres son dígitos. */
     private final String NUMBER_SIGN = "⠼";
 
+    /** Símbolo de prefijo utilizado para indicar que los siguientes caracteres son mayúsculas. */
+    private final String CAPITAL_SIGN = "⠨";
+
     /**
-     * Constructor que inicializa el mapa Braille cargando todas las series de caracteres
-     * (letras, acentos, puntuación y dígitos) necesarias para la traducción.
+     * Crea un traductor e inicializa los diccionarios de conversión.
+     *
+     * El diccionario inverso se construye a partir del diccionario directo para garantizar consistencia
+     * en ambas direcciones.
      */
     public BrailleTranslator() {
         brailleMap = new HashMap<>();
@@ -22,6 +31,11 @@ public class BrailleTranslator {
         initAccents();
         initPunctuation();
         initDigits();
+
+        reverseBrailleMap = new HashMap<>();
+        for (Map.Entry<Character, String> e : brailleMap.entrySet()) {
+            reverseBrailleMap.put(e.getValue(), e.getKey());
+        }
     }
     /**
      * Inicializa las letras básicas (a-z) y las letras adicionales del braille español (ñ, ü).
@@ -141,7 +155,7 @@ public class BrailleTranslator {
             }
 
             if (token.matches("[A-ZÁÉÍÓÚÜÑ]+")) {
-                result.append("⠨");
+                result.append(CAPITAL_SIGN);
                 for (char c : token.toCharArray()) {
                     char lower = Character.toLowerCase(c);
                     result.append(getBrailleChar(lower));
@@ -180,7 +194,7 @@ public class BrailleTranslator {
                 }
                 
                 if (Character.isLetter(c) && Character.isUpperCase(c)) {
-                    result.append("⠨"); 
+                    result.append(CAPITAL_SIGN);
                     result.append(getBrailleChar(Character.toLowerCase(c)));
                     insideNumber = false;
                     continue;
@@ -192,6 +206,96 @@ public class BrailleTranslator {
         }
 
         return result.toString();
+    }
+
+    /**
+     * Convierte una cadena de texto en código Braille a su representación en español.
+     * El método realiza las siguientes operaciones:
+     * Maneja letras mayúsculas al detectar el signo de mayúscula '⠨'.
+     * Maneja el modo numérico al detectar el signo numérico '⠼'.
+     * Soporta números con guiones.
+     *
+     * @param braille La cadena de texto en código Braille a traducir.
+     * @return La cadena de texto traducida al español. Retorna una cadena vacía si la entrada es nula o vacía.
+     */
+    public String brailleToText(String braille) {
+        if (braille == null || braille.isBlank()) return "";
+
+        StringBuilder out = new StringBuilder();
+        boolean nextUpper = false;
+        boolean numberMode = false;
+
+        for (int i = 0; i < braille.length(); i++) {
+            char ch = braille.charAt(i);
+
+            if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
+                out.append(ch);
+                nextUpper = false;
+                numberMode = false;
+                continue;
+            }
+
+            String cell = String.valueOf(ch);
+
+            if (cell.equals(CAPITAL_SIGN)) {
+                nextUpper = true;
+                continue;
+            }
+
+            if (cell.equals(NUMBER_SIGN)) {
+                numberMode = true;
+                continue;
+            }
+
+            Character decoded = reverseBrailleMap.get(cell);
+
+            if (decoded == null) {
+                out.append("�");
+                continue;
+            }
+
+            if (numberMode) {
+                char digit = letterToDigit(decoded);
+                if (digit != 0) {
+                    out.append(digit);
+                    continue;
+                } else {
+                    numberMode = false;
+                }
+            }
+
+            if (nextUpper) {
+                out.append(Character.toUpperCase(decoded));
+                nextUpper = false;
+            } else {
+                out.append(decoded);
+            }
+        }
+
+        return out.toString();
+    }
+
+    /**
+     * Convierte una letra (a-j) a su dígito correspondiente (1-0).
+     *
+     * @param c La letra a convertir.
+     * @return El dígito correspondiente o 0 si la letra no es válida.
+     */
+    private char letterToDigit(char c) {
+        c = Character.toLowerCase(c);
+        return switch (c) {
+            case 'a' -> '1';
+            case 'b' -> '2';
+            case 'c' -> '3';
+            case 'd' -> '4';
+            case 'e' -> '5';
+            case 'f' -> '6';
+            case 'g' -> '7';
+            case 'h' -> '8';
+            case 'i' -> '9';
+            case 'j' -> '0';
+            default -> 0;
+        };
     }
 
     /**
