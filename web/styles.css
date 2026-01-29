@@ -266,3 +266,11 @@ main.translator{
   transform: scale(1.1);
   cursor: pointer;
 }
+
+/* Opcional: el box del teclado braille se ve más “integrado” */
+#brailleKeyboardBox{
+  border: 1px solid #9ca3af;
+  padding: .75rem;
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.35);
+}

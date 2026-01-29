@@ -23,11 +23,26 @@
 
     <div class="tcontrols">
       <button id="btnRun" class="primary">Traducir</button>
-      <button id="btnClearLeft" class="ghost" title="Limpiar">✕</button>
+      <button id="btnClearLeft" class="primary" title="Limpiar">Limpiar texto</button>
+    </div>
+
+    <!-- Solo se muestra en Braille -> Español -->
+    <div id="brailleKeyboardBox" style="display:none; margin-top: 0.75rem;">
+      <label class="checkline" style="user-select:none;">
+        <input type="checkbox" id="chkBrailleKeyboard">
+        Teclado Braille (Q A Z W S X)
+      </label>
+
+      <div class="tinfo" style="margin-top: .35rem;">
+        <small>
+            Presiona las teclas Q/A/Z/W/S/X (puntos 1–6) para escribir en braille.
+          <br>
+        </small>
+      </div>
     </div>
 
     <div class="tinfo">
-      <small>Español → Braille</small>
+      <small id="lblHint">Español → Braille</small>
     </div>
   </section>
 
@@ -72,6 +87,7 @@
 
   const lblLeft = document.getElementById("lblLeft");
   const lblRight = document.getElementById("lblRight");
+  const lblHint = document.getElementById("lblHint");
 
   const btnRun = document.getElementById("btnRun");
   const btnSwap = document.getElementById("btnSwap");
@@ -83,6 +99,9 @@
   const canvas = document.getElementById("brailleCanvas");
   const ctx = canvas.getContext("2d");
 
+  // =========================
+  // MODO ESPEJO (descarga)
+  // =========================
   function espejoCeldaBraille(ch) {
     const code = ch.codePointAt(0);
     if (code < 0x2800 || code > 0x28FF) return ch;
@@ -113,29 +132,233 @@
       .join("\n");
   }
 
+  // =========================
+  // TECLADO BRAILLE (Perkins) - FIX
+  // =========================
+const brailleKeyboardBox = document.getElementById("brailleKeyboardBox");
+const chkBrailleKeyboard = document.getElementById("chkBrailleKeyboard");
+
+const dotKeyMap = { q: 1, a: 2, z: 3, w: 4, s: 5, x: 6 };
+
+// puntos mantenidos presionados (en tiempo real)
+const activeDots = new Set();
+
+// puntos que pertenecen al "golpe" actual (stroke)
+let strokeDots = new Set();
+let inStroke = false;
+
+function isBrailleKeyboardEnabled() {
+  return direction === "BR_TO_ES" && chkBrailleKeyboard.checked;
+}
+
+function buildBrailleCellFromDots(dots) {
+  let mask = 0;
+  dots.forEach(dot => mask |= (1 << (dot - 1)));
+  return String.fromCharCode(0x2800 + mask);
+}
+
+function insertAtCursor(textarea, text) {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  textarea.setRangeText(text, start, end, "end");
+}
+
+function commitStrokeIfReady() {
+  // Si ya no hay teclas de puntos presionadas
+  if (activeDots.size === 0 && inStroke && strokeDots.size > 0) {
+    const cell = buildBrailleCellFromDots(strokeDots);
+    insertAtCursor(txtLeft, cell);
+    strokeDots = new Set();
+    inStroke = false;
+  }
+}
+
+txtLeft.addEventListener("keydown", (e) => {
+  if (!isBrailleKeyboardEnabled()) return;
+
+  const key = e.key.toLowerCase();
+
+  // Teclas de puntos
+  if (dotKeyMap[key]) {
+    e.preventDefault();
+    const dot = dotKeyMap[key];
+
+    activeDots.add(dot);
+    // inicia stroke y guarda el dot
+    inStroke = true;
+    strokeDots.add(dot);
+    return;
+  }
+
+  // Espacio: inserta espacio normal (no celda)
+  if (e.key === " ") {
+    e.preventDefault();
+    insertAtCursor(txtLeft, " ");
+    // reset stroke (porque espacio separa)
+    activeDots.clear();
+    strokeDots = new Set();
+    inStroke = false;
+    return;
+  }
+
+  // Enter: salto de línea
+  if (e.key === "Enter") {
+    e.preventDefault();
+    insertAtCursor(txtLeft, "\n");
+    activeDots.clear();
+    strokeDots = new Set();
+    inStroke = false;
+    return;
+  }
+
+  // Backspace: borrar
+  if (e.key === "Backspace") {
+    e.preventDefault();
+
+    const start = txtLeft.selectionStart ?? txtLeft.value.length;
+    const end = txtLeft.selectionEnd ?? txtLeft.value.length;
+
+    if (start !== end) {
+      txtLeft.setRangeText("", start, end, "start");
+    } else if (start > 0) {
+      txtLeft.setRangeText("", start - 1, start, "start");
+    }
+
+    activeDots.clear();
+    strokeDots = new Set();
+    inStroke = false;
+    return;
+  }
+
+  if (e.key === "Tab") return;
+
+  // bloquear otras teclas
+  e.preventDefault();
+});
+
+txtLeft.addEventListener("keyup", (e) => {
+  if (!isBrailleKeyboardEnabled()) return;
+
+  const key = e.key.toLowerCase();
+  if (dotKeyMap[key]) {
+    activeDots.delete(dotKeyMap[key]);
+    // si se soltaron todas las teclas del golpe, inserta la celda
+    commitStrokeIfReady();
+  }
+});
+
+chkBrailleKeyboard.addEventListener("change", () => {
+  activeDots.clear();
+  strokeDots = new Set();
+  inStroke = false;
+  if (chkBrailleKeyboard.checked) txtLeft.focus();
+});
+
+
+  // Captura SOLO dentro del textarea izquierdo cuando teclado braille está activo
+  txtLeft.addEventListener("keydown", (e) => {
+    if (!isBrailleKeyboardEnabled()) return;
+
+    const key = e.key.toLowerCase();
+
+    if (dotKeyMap[key]) {
+      activeDots.add(dotKeyMap[key]);
+      e.preventDefault();
+      return;
+    }
+
+    if (e.key === " ") {
+      e.preventDefault();
+
+      if (activeDots.size === 0) {
+        insertAtCursor(txtLeft, " ");
+        return;
+      }
+
+      const cell = buildBrailleCellFromDots(activeDots);
+      insertAtCursor(txtLeft, cell);
+      activeDots.clear();
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      insertAtCursor(txtLeft, "\n");
+      activeDots.clear();
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+
+      const start = txtLeft.selectionStart ?? txtLeft.value.length;
+      const end = txtLeft.selectionEnd ?? txtLeft.value.length;
+
+      if (start !== end) {
+        txtLeft.setRangeText("", start, end, "start");
+      } else if (start > 0) {
+        txtLeft.setRangeText("", start - 1, start, "start");
+      }
+
+      activeDots.clear();
+      return;
+    }
+
+    if (e.key === "Tab") return;
+
+    // Bloquea otras teclas para que no se mezclen letras normales
+    e.preventDefault();
+  });
+
+  txtLeft.addEventListener("keyup", (e) => {
+    if (!isBrailleKeyboardEnabled()) return;
+
+    const key = e.key.toLowerCase();
+    if (dotKeyMap[key]) activeDots.delete(dotKeyMap[key]);
+  });
+
+  chkBrailleKeyboard.addEventListener("change", () => {
+    activeDots.clear();
+    if (chkBrailleKeyboard.checked) txtLeft.focus();
+  });
+
+  // =========================
+  // UI
+  // =========================
   function updateUI() {
+    // Siempre editable el input
+    txtLeft.readOnly = false;
+    txtRight.readOnly = true;
+
     if (direction === "ES_TO_BR") {
       lblLeft.textContent = "español";
       lblRight.textContent = "braille";
-      btnRun.textContent = "Traducir";
+      lblHint.textContent = "Español → Braille";
+
       txtLeft.placeholder = "Escribe aquí en español...";
       txtRight.placeholder = "Aquí se mostrará el resultado en braille...";
-      txtLeft.readOnly = false;
-      txtRight.readOnly = true;
+
+      brailleKeyboardBox.style.display = "none";
+      chkBrailleKeyboard.checked = false;
+      activeDots.clear();
 
       btnDescargar.disabled = !txtRight.value.trim();
     } else {
       lblLeft.textContent = "braille";
       lblRight.textContent = "español";
-      btnRun.textContent = "Traducir";
-      txtLeft.placeholder = "Escribe o pega aquí en braille...";
+      lblHint.textContent = "Braille → Español";
+
+      txtLeft.placeholder = "Escribe o pega aquí en braille... (o activa Teclado Braille)";
       txtRight.placeholder = "Aquí se mostrará el resultado en español...";
-      txtLeft.readOnly = false;
-      txtRight.readOnly = true;
+
+      brailleKeyboardBox.style.display = "block";
       btnDescargar.disabled = true;
     }
   }
 
+  // =========================
+  // Traducción (API)
+  // =========================
   async function translate() {
     const input = txtLeft.value || "";
 
@@ -162,7 +385,6 @@
       });
       const texto = await res.json();
       txtRight.value = texto;
-
       btnDescargar.disabled = true;
     }
   }
@@ -176,23 +398,28 @@
     txtLeft.value = rightVal;
     txtRight.value = leftVal;
 
+    activeDots.clear();
     updateUI();
   }
 
+  // =========================
+  // Eventos
+  // =========================
   btnRun.addEventListener("click", translate);
-
-  btnSwap.addEventListener("click", () => {
-    swapDirection();
-  });
+  btnSwap.addEventListener("click", swapDirection);
 
   btnClearLeft.addEventListener("click", () => {
     txtLeft.value = "";
     txtRight.value = "";
+    activeDots.clear();
     updateUI();
     txtLeft.focus();
   });
 
+  // Ctrl+Enter para traducir (cuando NO está teclado braille activo)
   txtLeft.addEventListener("keydown", (e) => {
+    if (isBrailleKeyboardEnabled()) return;
+
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       translate();
