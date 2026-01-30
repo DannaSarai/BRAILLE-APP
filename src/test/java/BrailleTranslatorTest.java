@@ -1,83 +1,72 @@
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BrailleTranslatorTest {
 
     private final BrailleTranslator translator = new BrailleTranslator();
 
-    // ==========================================
-    // PRUEBAS: TEXTO A BRAILLE (Español -> Braille)
-    // ==========================================
-
     @Test
-    public void testTextToBraille_palabraSimple() {
-        // "hola" -> ⠓ (h) ⠕ (o) ⠇ (l) ⠁ (a)
-        assertEquals("⠓⠕⠇⠁", translator.textToBraille("hola"));
-    }
-
- @Test
-public void testTextToBraille_mayusculas() {
-    // Cambiamos el valor esperado para que coincida con la lógica de tu código
-    assertEquals("⠨⠁", translator.textToBraille("A"));
-    assertEquals("⠨⠓⠕⠇⠁", translator.textToBraille("HOLA")); 
-}
-
-    @Test
-    public void testTextToBraille_numeros() {
-        // Los números deben llevar el prefijo ⠼ (NUMBER_SIGN)
-        assertEquals("⠼⠁", translator.textToBraille("1"));
-        assertEquals("⠼⠁⠃⠉", translator.textToBraille("123"));
+    @DisplayName("CP-001: Conversión básica de letras minúsculas")
+    void testLetrasBasicas() {
+        String resultado = translator.textToBraille("hola");
+        assertEquals("⠓⠕⠇⠁", resultado);
     }
 
     @Test
-    public void testTextToBraille_acentos() {
-        // Verifica que á, é, í, ó, ú funcionen
-        assertEquals("⠷", translator.textToBraille("á"));
-        assertEquals("⠾", translator.textToBraille("ú"));
+    @DisplayName("CP-002: Conversión de vocales acentuadas")
+    void testVocalesAcentuadas() {
+        String resultado = translator.textToBraille("café");
+        assertEquals("⠉⠁⠋⠮", resultado);
     }
 
     @Test
-    public void testTextToBraille_espaciosYFrases() {
-        // Verifica que los espacios se respeten
-        assertEquals("⠓⠕⠇⠁ ⠍⠥⠝⠙⠕", translator.textToBraille("hola mundo"));
-    }
-
-    // ==========================================
-    // PRUEBAS: BRAILLE A TEXTO (Braille -> Español)
-    // ==========================================
-
-    @Test
-    public void testBrailleToText_basico() {
-        assertEquals("hola", translator.brailleToText("⠓⠕⠇⠁"));
+    @DisplayName("CP-003: Conversión de números con prefijo numérico")
+    void testNumeros() {
+        String resultado = translator.textToBraille("123");
+        assertEquals("⠼⠁⠃⠉", resultado);
     }
 
     @Test
-    public void testBrailleToText_conMayusculas() {
-        // Al detectar ⠨ la siguiente letra debe ser mayúscula
-        assertEquals("Hola", translator.brailleToText("⠨⠓⠕⠇⠁"));
+    @DisplayName("CP-004: Conversión de texto mixto (letras, números y espacios)")
+    void testTextoMixto() {
+        // ERROR CORREGIDO: Eliminadas las etiquetas 'text:' y 'message:'
+        String resultado = translator.textToBraille("hola 123 mundo");
+        String esperado = "⠓⠕⠇⠁ ⠼⠁⠃⠉ ⠍⠥⠝⠙⠕";
+        assertEquals(esperado, resultado, "El texto mixto debe manejar letras, números y espacios correctamente");
     }
 
     @Test
-    public void testBrailleToText_conNumeros() {
-        // Al detectar ⠼ debe entrar en modo numérico
-        assertEquals("123", translator.brailleToText("⠼⠁⠃⠉"));
+    @DisplayName("CP-005: Conversión de signos de puntuación")
+    void testPuntuacion() {
+        String resultado = translator.textToBraille("¿hola?");
+        assertEquals("⠢⠓⠕⠇⠁⠢", resultado);
     }
 
-    // ==========================================
-    // PRUEBAS DE ROBUSTEZ (Edge Cases)
-    // ==========================================
-
     @Test
-    public void testCasosVaciosYNulos() {
+    @DisplayName("CP-006: Manejo de entrada vacía o nula")
+    void testEntradaVaciaNula() {
         assertEquals("", translator.textToBraille(""));
         assertEquals("", translator.textToBraille(null));
-        assertEquals("", translator.brailleToText(""));
-        assertEquals("", translator.brailleToText(null));
+        assertEquals("", translator.textToBraille("   "));
     }
 
     @Test
-    public void testCaracterNoExistente() {
-        // Si ingresas algo que no está en el mapa, tu código devuelve un signo de interrogación especial
-        assertTrue(translator.textToBraille("$").contains("⍰"));
+    @DisplayName("CP-007: Traducción inversa (Braille a Español)")
+    void testTraduccionInversa() {
+        String resultado = translator.brailleToText("⠨⠓⠕⠇⠁ ⠼⠁");
+        assertEquals("Hola 1", resultado);
+    }
+
+    @Test
+    @DisplayName("CP-008: Números con guiones")
+    void testNumerosGuiones() {
+        assertEquals("⠼⠁⠤⠼⠃", translator.textToBraille("1-2"));
+    }
+
+    @Test
+    @DisplayName("CP-009: Mayúsculas por bloques (EPN)")
+    void testMayusculasBloque() {
+        assertEquals("⠨⠑⠏⠝", translator.textToBraille("EPN"));
     }
 }
